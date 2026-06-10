@@ -15,6 +15,7 @@ const STATUS_OPTIONS = [
 let scans = [];
 let lastResults = [];
 let currentVideoTrack = null;
+let torchOn = false;
 
 function showPage(pageId) {
   document.querySelectorAll(".page").forEach(page => {
@@ -151,7 +152,7 @@ function startScanner() {
       Quagga.onDetected(onDetectedHandler);
 
       setStatus('Scanning for TCNs starting with "AW"...', "info");
-      setTimeout(enableTorch, 500);
+      //setTimeout(enableTorch, 500);
     }
   );
 }
@@ -224,11 +225,14 @@ function showStatusPopup(tcn, isManual) {
   overlay.style.display = "flex";
 }
 
-async function enableTorch() {
+async function setTorch(enabled) {
   try {
     const videoElement = document.querySelector("#scanner-container video");
 
-    if (!videoElement || !videoElement.srcObject) return;
+    if (!videoElement || !videoElement.srcObject) {
+      setStatus("Camera is not active yet.", "error");
+      return;
+    }
 
     const tracks = videoElement.srcObject.getVideoTracks();
 
@@ -240,30 +244,48 @@ async function enableTorch() {
       ? currentVideoTrack.getCapabilities()
       : {};
 
-    if (capabilities.torch) {
-      await currentVideoTrack.applyConstraints({
-        advanced: [{ torch: true }]
-      });
+    if (!capabilities.torch) {
+      setStatus("Flashlight is not supported on this device/browser.", "error");
+      return;
     }
-  } catch (error) {}
+
+    await currentVideoTrack.applyConstraints({
+      advanced: [{ torch: enabled }]
+    });
+
+    torchOn = enabled;
+    document.getElementById("torch-btn").textContent = enabled ? "Light Off" : "Light On";
+  } catch (error) {
+    setStatus("Unable to toggle flashlight.", "error");
+  }
+}
+
+function toggleTorch() {
+  setTorch(!torchOn);
 }
 
 async function disableTorch() {
   try {
-    if (!currentVideoTrack) return;
+    if (currentVideoTrack) {
+      const capabilities = currentVideoTrack.getCapabilities
+        ? currentVideoTrack.getCapabilities()
+        : {};
 
-    const capabilities = currentVideoTrack.getCapabilities
-      ? currentVideoTrack.getCapabilities()
-      : {};
-
-    if (capabilities.torch) {
-      await currentVideoTrack.applyConstraints({
-        advanced: [{ torch: false }]
-      });
+      if (capabilities.torch) {
+        await currentVideoTrack.applyConstraints({
+          advanced: [{ torch: false }]
+        });
+      }
     }
   } catch (error) {
   } finally {
+    torchOn = false;
     currentVideoTrack = null;
+
+    const torchBtn = document.getElementById("torch-btn");
+    if (torchBtn) {
+      torchBtn.textContent = "Light On";
+    }
   }
 }
 
@@ -304,6 +326,7 @@ document.getElementById("reset-btn").addEventListener("click", resetScans);
 document.getElementById("manual-tcn-btn").addEventListener("click", openManualTCNPopup);
 document.getElementById("manual-tcn-cancel").addEventListener("click", closeManualTCNPopup);
 document.getElementById("manual-tcn-submit").addEventListener("click", submitManualTCN);
+document.getElementById("torch-btn").addEventListener("click", toggleTorch);
 
 document.getElementById("manual-tcn-input").addEventListener("keydown", function(event) {
   if (event.key === "Enter") {
