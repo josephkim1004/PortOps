@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Port Ops Scanner</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+  <main id="app">
+    <section id="home-page" class="page active">
+      <h1>Port Ops</h1>
+
+      <div class="home-grid">
+        <button class="home-card" onclick="showPage('scanner-page')">
+          <span>Track by TCN</span>
+          <small>Scan or manually enter a TCN</small>
+        </button>
+
+        <button class="home-card disabled" disabled>
+          <span>Track by Unit / Bumper</span>
+          <small>Coming soon</small>
+        </button>
+      </div>
+    </section>
+
+    <section id="scanner-page" class="page">
+      <div class="top-bar">
+        <button onclick="showPage('home-page')">Back</button>
+        <h2>Track by TCN</h2>
+      </div>
+
+      <div id="main-row">
+        <div id="scanner-container">
+          <div id="blackout-overlay"></div>
+        </div>
+
+        <div id="button-column">
+          <button id="start-btn">Start Scanning</button>
+          <button id="stop-btn">Stop Scanning</button>
+          <button id="manual-tcn-btn">Manual TCN</button>
+          <button id="reset-btn">Clear List</button>
+        </div>
+      </div>
+
+      <div id="status-message" class="status-info">Ready to scan.</div>
+
+      <h3>Scanned TCNs</h3>
+
+      <table id="scans-table">
+        <thead>
+          <tr>
+            <th>Timestamp</th>
+            <th>TCN</th>
+            <th>Status</th>
+            <th>Sheet Status</th>
+            <th>Entry Type</th>
+          </tr>
+        </thead>
+        <tbody id="scans-body"></tbody>
+      </table>
+    </section>
+  </main>
+
+  <div id="popup-overlay">
+    <div id="popup-box">
+      <h3>Select Location</h3>
+      <p id="popup-tcn"></p>
+      <div id="popup-buttons"></div>
+    </div>
+  </div>
+
+  <div id="manual-tcn-popup">
+    <div class="manual-box">
+      <h3>Manual TCN Entry</h3>
+      <input type="text" id="manual-tcn-input" placeholder="Enter TCN" maxlength="100" />
+
+      <div class="manual-actions">
+        <button id="manual-tcn-submit">Submit</button>
+        <button id="manual-tcn-cancel">Cancel</button>
+      </div>
+
+      <div id="manual-tcn-error"></div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/@ericblade/quagga2/dist/quagga.min.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
