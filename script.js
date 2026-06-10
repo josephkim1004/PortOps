@@ -1,4 +1,4 @@
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyLwosVd8aib5HtOqM1RRun1hKQ4gpcZAOnxRh0An_UNJ2tO-UGmYLQwAhtbKmWriKIvw/execERE";
+const APPS_SCRIPT_URL = "PASTE_YOUR_APPS_SCRIPT_EXEC_URL_HERE";
 
 const REQUIRED_PREFIX = "AW";
 const MIN_BARCODE_LENGTH = 7;
@@ -16,6 +16,7 @@ let scans = [];
 let lastResults = [];
 let currentVideoTrack = null;
 let torchOn = false;
+let scannerRunning = false;
 
 function showPage(pageId) {
   document.querySelectorAll(".page").forEach(page => {
@@ -24,7 +25,9 @@ function showPage(pageId) {
 
   document.getElementById(pageId).classList.add("active");
 
-  if (pageId !== "scanner-page") {
+  if (pageId === "scanner-page") {
+    setTimeout(startScanner, 300);
+  } else {
     stopScannerSafe();
   }
 }
@@ -79,7 +82,7 @@ function blackoutScanner() {
 
 async function sendTCNToSheet(tcn, status, statusCell) {
   try {
-    const response = await fetch(APPS_SCRIPT_URL, {
+    await fetch(APPS_SCRIPT_URL, {
       method: "POST",
       mode: "no-cors",
       headers: {
@@ -102,6 +105,8 @@ async function sendTCNToSheet(tcn, status, statusCell) {
 }
 
 function startScanner() {
+  if (scannerRunning) return;
+
   if (typeof Quagga === "undefined") {
     setStatus("Scanner library failed to load.", "error");
     return;
@@ -128,7 +133,6 @@ function startScanner() {
       },
 
       numOfWorkers: navigator.hardwareConcurrency || 4,
-
       frequency: 10,
 
       decoder: {
@@ -142,6 +146,7 @@ function startScanner() {
     },
     function(error) {
       if (error) {
+        scannerRunning = false;
         setStatus("Error initializing scanner.", "error");
         alert("Error initializing scanner: " + error);
         return;
@@ -151,8 +156,15 @@ function startScanner() {
       Quagga.offDetected(onDetectedHandler);
       Quagga.onDetected(onDetectedHandler);
 
+      scannerRunning = true;
+      torchOn = false;
+
+      const torchBtn = document.getElementById("torch-btn");
+      if (torchBtn) {
+        torchBtn.textContent = "Light On";
+      }
+
       setStatus('Scanning for TCNs starting with "AW"...', "info");
-      //setTimeout(enableTorch, 500);
     }
   );
 }
@@ -160,18 +172,75 @@ function startScanner() {
 async function stopScanner() {
   try {
     Quagga.offDetected(onDetectedHandler);
-    await disableTorch();
+    await setTorch(false);
     Quagga.stop();
-  } catch (error) {}
+  } catch (error) {
+  }
 
+  scannerRunning = false;
   lastResults = [];
+
+  const torchBtn = document.getElementById("torch-btn");
+  if (torchBtn) {
+    torchBtn.textContent = "Light On";
+  }
+
   setStatus("Scanner stopped.", "info");
 }
 
 function stopScannerSafe() {
   try {
     stopScanner();
-  } catch (error) {}
+  } catch (error) {
+  }
+}
+
+async function setTorch(enabled) {
+  try {
+    const videoElement = document.querySelector("#scanner-container video");
+
+    if (!videoElement || !videoElement.srcObject) {
+      setStatus("Camera must be active before using the light.", "error");
+      return;
+    }
+
+    const tracks = videoElement.srcObject.getVideoTracks();
+
+    if (!tracks || tracks.length === 0) {
+      setStatus("No camera track found.", "error");
+      return;
+    }
+
+    currentVideoTrack = tracks[0];
+
+    const capabilities = currentVideoTrack.getCapabilities
+      ? currentVideoTrack.getCapabilities()
+      : {};
+
+    if (!capabilities.torch) {
+      setStatus("Light is not supported on this phone/browser.", "error");
+      return;
+    }
+
+    await currentVideoTrack.applyConstraints({
+      advanced: [{ torch: enabled }]
+    });
+
+    torchOn = enabled;
+
+    const torchBtn = document.getElementById("torch-btn");
+    if (torchBtn) {
+      torchBtn.textContent = enabled ? "Light Off" : "Light On";
+    }
+
+    setStatus(enabled ? "Light turned on." : "Light turned off.", "info");
+  } catch (error) {
+    setStatus("Unable to toggle light.", "error");
+  }
+}
+
+function toggleTorch() {
+  setTorch(!torchOn);
 }
 
 function onDetectedHandler(result) {
@@ -225,70 +294,6 @@ function showStatusPopup(tcn, isManual) {
   overlay.style.display = "flex";
 }
 
-async function setTorch(enabled) {
-  try {
-    const videoElement = document.querySelector("#scanner-container video");
-
-    if (!videoElement || !videoElement.srcObject) {
-      setStatus("Camera is not active yet.", "error");
-      return;
-    }
-
-    const tracks = videoElement.srcObject.getVideoTracks();
-
-    if (!tracks || tracks.length === 0) return;
-
-    currentVideoTrack = tracks[0];
-
-    const capabilities = currentVideoTrack.getCapabilities
-      ? currentVideoTrack.getCapabilities()
-      : {};
-
-    if (!capabilities.torch) {
-      setStatus("Flashlight is not supported on this device/browser.", "error");
-      return;
-    }
-
-    await currentVideoTrack.applyConstraints({
-      advanced: [{ torch: enabled }]
-    });
-
-    torchOn = enabled;
-    document.getElementById("torch-btn").textContent = enabled ? "Light Off" : "Light On";
-  } catch (error) {
-    setStatus("Unable to toggle flashlight.", "error");
-  }
-}
-
-function toggleTorch() {
-  setTorch(!torchOn);
-}
-
-async function disableTorch() {
-  try {
-    if (currentVideoTrack) {
-      const capabilities = currentVideoTrack.getCapabilities
-        ? currentVideoTrack.getCapabilities()
-        : {};
-
-      if (capabilities.torch) {
-        await currentVideoTrack.applyConstraints({
-          advanced: [{ torch: false }]
-        });
-      }
-    }
-  } catch (error) {
-  } finally {
-    torchOn = false;
-    currentVideoTrack = null;
-
-    const torchBtn = document.getElementById("torch-btn");
-    if (torchBtn) {
-      torchBtn.textContent = "Light On";
-    }
-  }
-}
-
 function resetScans() {
   scans = [];
   lastResults = [];
@@ -322,11 +327,11 @@ function submitManualTCN() {
 
 document.getElementById("start-btn").addEventListener("click", startScanner);
 document.getElementById("stop-btn").addEventListener("click", stopScanner);
+document.getElementById("torch-btn").addEventListener("click", toggleTorch);
 document.getElementById("reset-btn").addEventListener("click", resetScans);
 document.getElementById("manual-tcn-btn").addEventListener("click", openManualTCNPopup);
 document.getElementById("manual-tcn-cancel").addEventListener("click", closeManualTCNPopup);
 document.getElementById("manual-tcn-submit").addEventListener("click", submitManualTCN);
-document.getElementById("torch-btn").addEventListener("click", toggleTorch);
 
 document.getElementById("manual-tcn-input").addEventListener("keydown", function(event) {
   if (event.key === "Enter") {
