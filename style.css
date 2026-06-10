@@ -90,10 +90,10 @@ h1 {
   color: #cbd5e1;
 }
 
-.home-card.disabled {
+/*.home-card.disabled {
   opacity: 0.45;
   cursor: not-allowed;
-}
+}*/
 
 button {
   padding: 12px 18px;
