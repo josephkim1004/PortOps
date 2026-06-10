@@ -1,4 +1,4 @@
-const APPS_SCRIPT_URL = "PASTE_YOUR_APPS_SCRIPT_EXEC_URL_HERE";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwPeWwnqof4sxyZwBDFocwspqa1pPK2iI7UGPC4jBGTbnaxLc3m_qn0m7oAHlwqf8uvVA/exec";
 
 const REQUIRED_PREFIX = "AW";
 const MIN_BARCODE_LENGTH = 7;
