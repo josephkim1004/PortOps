@@ -313,11 +313,16 @@ function closeManualTCNPopup() {
 }
 
 function submitManualTCN() {
-  const tcn = document.getElementById("manual-tcn-input").value.trim();
+  const tcn = document.getElementById("manual-tcn-input")
+    .value
+    .trim()
+    .toUpperCase();
 
-  if (!isValidBarcode(tcn)) {
+  const manualPattern = /^A[A-Z0-9]{6}\$0[A-Z0-9]{6}XX$/;
+
+  if (!manualPattern.test(tcn)) {
     document.getElementById("manual-tcn-error").textContent =
-      "Invalid TCN. Must start with AW and be at least 8 characters.";
+      "Invalid TCN. Format must be AXXXXXX$0XXXXXXXX";
     return;
   }
 
@@ -337,4 +342,8 @@ document.getElementById("manual-tcn-input").addEventListener("keydown", function
   if (event.key === "Enter") {
     submitManualTCN();
   }
+});
+
+document.getElementById("manual-tcn-input").addEventListener("input", function () {
+  this.value = this.value.toUpperCase();
 });
