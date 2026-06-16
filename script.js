@@ -322,7 +322,7 @@ function submitManualTCN() {
 
   if (!manualPattern.test(tcn)) {
     document.getElementById("manual-tcn-error").textContent =
-      "Invalid TCN. Format must be AXXXXXX$0XXXXXXXX";
+      "Invalid TCN. Format must be A______$0______XX";
     return;
   }
 
